@@ -19,19 +19,19 @@ public class PointerBehavior : MonoBehaviour
 
     // Layer mask for the raycast (only hits the "Ground" layer)
     public LayerMask groundLayer;  // Make sure you assign this in the Inspector to the correct layer (e.g., Ground layer)
+    public GameObject player;
+    public GameObject currentPikmin;
 
     private void Awake()
     {
-        // Initialize the PlayerInput component (assuming it's on the same GameObject)
         playerInput = GetComponent<PlayerInput>();
-
-        // Set up references to the input actions from the Pointer action map
-        var actionMap = playerInput.actions.FindActionMap("Pointer");  // Assuming the map is named "Pointer"
+        var actionMap = playerInput.actions.FindActionMap("Pointer");
         positionAction = actionMap.FindAction("Position");
         leftClickAction = actionMap.FindAction("LeftClick");
         rightClickAction = actionMap.FindAction("RightClick");
         scrollAction = actionMap.FindAction("Scroll");
     }
+
 
     private void OnEnable()
     {
@@ -52,7 +52,7 @@ public class PointerBehavior : MonoBehaviour
     {
         // Unsubscribe from events and disable input actions
         positionAction.performed -= OnMouseMove;
-        leftClickAction.performed -= OnLeftClick;
+        leftClickAction.performed -= OnLeftClick; // Ensure this matches the method name
         rightClickAction.performed -= OnRightClick;
         scrollAction.performed -= OnScroll;
 
@@ -61,6 +61,7 @@ public class PointerBehavior : MonoBehaviour
         rightClickAction.Disable();
         scrollAction.Disable();
     }
+
 
     private void Update()
     {
@@ -71,7 +72,6 @@ public class PointerBehavior : MonoBehaviour
     {
         // Get mouse position from input system
         Vector2 mousePosition = context.ReadValue<Vector2>();
-        Debug.Log($"Mouse Position: {mousePosition}");
 
         // Call RaycastFromMouse with the mouse position
         RaycastFromMouse(mousePosition);
@@ -81,6 +81,7 @@ public class PointerBehavior : MonoBehaviour
     {
         Debug.Log("Left Click detected!");
         RaycastFromMouse(Mouse.current.position.ReadValue());  // Use the current mouse position
+        FindPikmin();
     }
 
     private void OnRightClick(InputAction.CallbackContext context)
@@ -144,4 +145,62 @@ public class PointerBehavior : MonoBehaviour
         // Optionally: Lock rotation on X and Z axes only (keep it flat on the ground)
         currentCursorCircle.transform.rotation = Quaternion.Euler(90f, 0f, 0f);  // Keep it facing up
     }
+
+    private void FindPikmin()
+    {
+        // Find all Pikmin in the scene (assuming they have the "Pikmin" tag)
+        GameObject[] allPikmin = GameObject.FindGameObjectsWithTag("Pikmin");
+
+        if (allPikmin.Length == 0)
+        {
+            Debug.LogWarning("No Pikmin found in the scene.");
+            currentPikmin = null;
+            return;
+        }
+
+        // Initialize variables to keep track of the closest Pikmin
+        GameObject closestPikmin = null;
+        float closestDistance = Mathf.Infinity;
+
+        // Loop through all Pikmin and find the closest one to the player
+        foreach (GameObject pikmin in allPikmin)
+        {
+            // Calculate the distance between the player and the current Pikmin
+            float distance = Vector3.Distance(player.transform.position, pikmin.transform.position);
+
+            // If this Pikmin is closer than the current closest, update the variables
+            if (distance < closestDistance)
+            {
+                closestDistance = distance;
+                closestPikmin = pikmin;
+            }
+        }
+
+        // Store the closest Pikmin as the current Pikmin
+        currentPikmin = closestPikmin;
+
+        if (currentPikmin != null)
+        {
+            Debug.Log($"Closest Pikmin found: {currentPikmin.name} at distance {closestDistance}");
+            PickUpPikmin(currentPikmin); // Call method to pick up the Pikmin
+        }
+    }
+
+    private void PickUpPikmin(GameObject pikmin)
+    {
+        // Move Pikmin to player's position
+        pikmin.transform.position = player.transform.position + Vector3.up * 1.5f; // Position above player
+        pikmin.transform.parent = player.transform; // Parent Pikmin to the player
+
+        // Disable Pikmin's movement
+        PikminBehavior pikminBehavior = pikmin.GetComponent<PikminBehavior>();
+        if (pikminBehavior != null)
+        {
+            pikminBehavior.PickedUp();
+        }
+
+        Debug.Log($"{pikmin.name} has been picked up by the player.");
+    }
+
+
 }

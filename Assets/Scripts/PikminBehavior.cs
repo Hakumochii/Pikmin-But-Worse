@@ -9,7 +9,7 @@ public class PikminBehavior : MonoBehaviour
     public GameObject player;
 
     // Define enum for task and create a variable to store the current task
-    public enum Task { Idle, Following, Stop, Working, Dying }
+    public enum Task { Idle, Following, Stop, PickedUp, Working, Dying }
     public Task task = Task.Idle;
 
     // Target GameObject to follow or interact with
@@ -47,6 +47,8 @@ public class PikminBehavior : MonoBehaviour
                 break;
             case Task.Stop:
                 StandStill();
+                break;
+            case Task.PickedUp:
                 break;
             case Task.Working:
                 // Working behavior, such as gathering resources or repairing structures
@@ -100,6 +102,23 @@ public class PikminBehavior : MonoBehaviour
         }
  
     }
+
+    public void PickedUp()
+    {
+        // Stop NavMeshAgent from moving
+        if (agent != null)
+        {
+            agent.isStopped = true;
+            agent.enabled = false;
+        }
+
+        // Change task to indicate it's picked up
+        task = Task.PickedUp;
+
+        // Optionally disable any other behaviors while being carried
+        followingPlayer = false;
+    }
+
 
 
 
