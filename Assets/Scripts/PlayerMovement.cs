@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-public class PlayerBehavior : MonoBehaviour
+public class PlayerMovement : MonoBehaviour
 {
     // general movement
     private Vector2 move;                  // Made private
@@ -106,3 +106,4 @@ public class PlayerBehavior : MonoBehaviour
         );
     }
 }
+

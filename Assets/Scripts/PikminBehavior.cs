@@ -6,6 +6,7 @@ using UnityEngine.AI;
 public class PikminBehavior : MonoBehaviour
 {
     private NavMeshAgent agent;
+    private Rigidbody rb;
     public GameObject player;
 
     // Define enum for task and create a variable to store the current task
@@ -14,18 +15,21 @@ public class PikminBehavior : MonoBehaviour
 
     // Target GameObject to follow or interact with
     private GameObject target;
-    [SerializeField] private bool followingPlayer = false;
-
+    public bool followingPlayer = false;
 
     private void Start()
     {
-        // Initialize the NavMeshAgent component
+        // Initialize the NavMeshAgent and Rigidbody components
         agent = GetComponent<NavMeshAgent>();
+        rb = GetComponent<Rigidbody>();
 
         // Increase avoidance priority and adjust the avoidance type
         agent.avoidancePriority = 50; // Adjust priority, higher values move out of the way more
         agent.obstacleAvoidanceType = ObstacleAvoidanceType.HighQualityObstacleAvoidance;
         agent.radius = 0.3f; // Adjust based on your Pikmin's size
+
+        // Initially disable Rigidbody physics
+        rb.isKinematic = true; // Disable physics until picked up
     }
 
     private void Update()
@@ -57,12 +61,13 @@ public class PikminBehavior : MonoBehaviour
                 // Dying behavior, such as fading out or disappearing
                 break;
         }
-    
     }
 
     // Set the agent's destination to the target's position with offset
     private void Follow(GameObject target)
     {
+        agent.enabled = true;
+        rb.isKinematic = true;
         agent.isStopped = false;
         agent.SetDestination(target.transform.position);
     }
@@ -77,49 +82,49 @@ public class PikminBehavior : MonoBehaviour
     {
         if (collision.gameObject.CompareTag("PlayerRange"))
         {
-            task = Task.Stop;
-
-            if (followingPlayer != true)
+            if (task != Task.PickedUp)
             {
-                target = player;
-                followingPlayer = true;
+                task = Task.Stop;
+
+                if (!followingPlayer)
+                {
+                    target = player;
+                    followingPlayer = true;
+                }
+
             }
             
         }
-    }
 
+        if (collision.gameObject.layer == LayerMask.NameToLayer("Ground"))
+        {
+            if (!followingPlayer)
+            {
+                task = Task.Idle;
+            }
+        }
+
+    }
 
     private void OnTriggerExit(Collider collision)
     {
         if (collision.gameObject.CompareTag("PlayerRange"))
         {
-            Debug.Log("Out of player range");
-            if (followingPlayer == true)
+            if (followingPlayer)
             {
                 task = Task.Following;
-                Debug.Log("Started following player");
             }
         }
- 
     }
 
     public void PickedUp()
     {
-        // Stop NavMeshAgent from moving
-        if (agent != null)
-        {
-            agent.isStopped = true;
-            agent.enabled = false;
-        }
-
         // Change task to indicate it's picked up
         task = Task.PickedUp;
+        agent.enabled = false;
 
         // Optionally disable any other behaviors while being carried
         followingPlayer = false;
     }
-
-
-
 
 }
