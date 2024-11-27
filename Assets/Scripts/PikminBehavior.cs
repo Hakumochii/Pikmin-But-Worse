@@ -14,7 +14,7 @@ public class PikminBehavior : MonoBehaviour
     public Task task = Task.Idle;
 
     // Target GameObject to follow or interact with
-    private GameObject target;
+    public GameObject target;
     public bool followingPlayer = false;
 
     private void Start()
@@ -80,20 +80,27 @@ public class PikminBehavior : MonoBehaviour
     // On collision with the player, switch to the "Follow" task
     private void OnTriggerEnter(Collider collision)
     {
-        if (collision.gameObject.CompareTag("PlayerRange"))
+        if (collision.gameObject.CompareTag("Player"))
         {
+            Debug.Log("collided with player");
             if (task != Task.PickedUp)
             {
-                task = Task.Stop;
-
-                if (!followingPlayer)
-                {
-                    target = player;
-                    followingPlayer = true;
-                }
-
+                target = player;
+                followingPlayer = true;
+                Debug.Log("now following player");
             }
             
+        }
+
+        if (collision.gameObject.CompareTag("PlayerRange"))
+        {
+            Debug. Log("collided with range");
+            Debug. Log(task + " followingPlayer: " + followingPlayer );
+            if (task != Task.PickedUp && followingPlayer)
+            {
+                Debug.Log("Now stopping because to close");
+                task = Task.Stop;
+            }  
         }
 
         if (collision.gameObject.layer == LayerMask.NameToLayer("Ground"))

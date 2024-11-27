@@ -14,11 +14,14 @@ public class PlayerInteraction : MonoBehaviour
     public GameObject cursorCircleBigPrefab;
     private GameObject currentCursorCircle;
     private GameObject currentCursorCircleBig;
-    private bool callingPikmin = false; // To track if you are calling Pikmin
+    private bool callingPikmin = false; 
 
     public LayerMask groundLayer;
+    public LayerMask pikminLayer;
     public GameObject player;
     public GameObject currentPikmin;
+
+    private Coroutine callPikminCoroutine;
 
     private void Awake()
     {
@@ -40,7 +43,8 @@ public class PlayerInteraction : MonoBehaviour
         positionAction.performed += OnMouseMove;
         leftClickAction.performed += OnLeftClick;
         leftClickAction.canceled += OnLeftClickRelease;
-        rightClickAction.performed += OnRightClick;
+        rightClickAction.performed += OnTestClick;
+        rightClickAction.canceled += OnRightClickRelease;
         scrollAction.performed += OnScroll;
     }
 
@@ -49,7 +53,8 @@ public class PlayerInteraction : MonoBehaviour
         positionAction.performed -= OnMouseMove;
         leftClickAction.performed -= OnLeftClick;
         leftClickAction.canceled -= OnLeftClickRelease;
-        rightClickAction.performed -= OnRightClick;
+        rightClickAction.performed -= OnTestClick;
+        rightClickAction.canceled -= OnRightClickRelease;
         scrollAction.performed -= OnScroll;
 
         positionAction.Disable();
@@ -74,15 +79,28 @@ public class PlayerInteraction : MonoBehaviour
         ThrowPikmin();
     }
 
-    private void OnRightClick(InputAction.CallbackContext context)
+    public void OnTestClick(InputAction.CallbackContext context)
     {
-        CallPikmin();
+        if (callPikminCoroutine == null) // Start only if not already running
+        {
+            callPikminCoroutine = StartCoroutine(CallPikminContinuously());
+        }
+    }
+
+    private void OnRightClickRelease(InputAction.CallbackContext context)
+    {
+        StopCallPikmin();
+        if (callPikminCoroutine != null)
+        {
+            StopCoroutine(callPikminCoroutine);
+            callPikminCoroutine = null;
+        }
     }
 
     private void OnScroll(InputAction.CallbackContext context)
     {
         Vector2 scrollDelta = context.ReadValue<Vector2>();
-        Debug.Log($"Mouse Scroll: {scrollDelta.y}");
+        //Debug.Log($"Mouse Scroll: {scrollDelta.y}");
 
         if (scrollDelta.y > 0)
         {
@@ -111,7 +129,13 @@ public class PlayerInteraction : MonoBehaviour
 
         if (callingPikmin)
         {
-            // If calling Pikmin, use the bigger cursor
+            // If switching to the big cursor, destroy the small one if it exists
+            if (currentCursorCircle != null)
+            {
+                Destroy(currentCursorCircle);
+                currentCursorCircle = null;
+            }
+
             if (currentCursorCircleBig == null)
             {
                 currentCursorCircleBig = Instantiate(cursorCircleBigPrefab, hit.point, Quaternion.identity);
@@ -121,7 +145,13 @@ public class PlayerInteraction : MonoBehaviour
         }
         else
         {
-            // Default cursor
+            // If switching to the small cursor, destroy the big one if it exists
+            if (currentCursorCircleBig != null)
+            {
+                Destroy(currentCursorCircleBig);
+                currentCursorCircleBig = null;
+            }
+
             if (currentCursorCircle == null)
             {
                 currentCursorCircle = Instantiate(cursorCirclePrefab, hit.point, Quaternion.identity);
@@ -131,19 +161,29 @@ public class PlayerInteraction : MonoBehaviour
         }
 
         // Update position
-        circle.transform.position = new Vector3(hit.point.x, hit.point.y + 0.1f, hit.point.z);
+        circle.transform.position = new Vector3(hit.point.x, hit.point.y + 0.5f, hit.point.z);
         circle.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+    }
+
+    private IEnumerator CallPikminContinuously()
+    {
+        while (true)
+        {
+            Vector2 mousePosition = Mouse.current.position.ReadValue();
+            CallPikmin(mousePosition);
+            yield return null; // Wait for the next frame to continue the loop
+        }
     }
 
     private void CallPikmin(Vector2 mousePosition)
     {
-        Debug.Log("Callpikmin called");
+        callingPikmin = true;
         Ray ray = Camera.main.ScreenPointToRay(mousePosition);
         RaycastHit hit;
         float rayRadius = 2.5f; // Define the radius of the sphere (larger means bigger area)
 
         // Cast a sphere along the ray's path
-        if (Physics.SphereCast(ray, rayRadius, out hit, Mathf.Infinity, groundLayer))  // You can specify layers to limit detection
+        if (Physics.SphereCast(ray, rayRadius, out hit, Mathf.Infinity, pikminLayer))
         {
             // Check if the ray hits a GameObject with the "Pikmin" tag
             if (hit.collider != null && hit.collider.CompareTag("Pikmin"))
@@ -152,11 +192,21 @@ public class PlayerInteraction : MonoBehaviour
                 PikminBehavior pikminBehavior = pikmin.GetComponent<PikminBehavior>();
                 if (pikminBehavior != null)
                 {
-                    pikminBehavior.task = PikminBehavior.Task.Following;
-                    Debug.Log("Pikmin is now following the player.");
+                    if (!pikminBehavior.followingPlayer)
+                    {
+                        pikminBehavior.target = player;
+                        pikminBehavior.task = PikminBehavior.Task.Following;
+                        pikminBehavior.followingPlayer = true;
+                    }
+                    
                 }
             }
         }
+    }
+
+    private void StopCallPikmin()
+    {
+        callingPikmin = false;
     }
 
     private void FindPikmin()
