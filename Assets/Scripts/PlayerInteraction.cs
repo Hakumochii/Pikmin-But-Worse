@@ -5,26 +5,36 @@ using UnityEngine.InputSystem;
 
 public class PlayerInteraction : MonoBehaviour
 {
+    //player input
     private PlayerInput playerInput;
     private InputAction positionAction;
     private InputAction leftClickAction;
     private InputAction rightClickAction;
     private InputAction scrollAction;
-    public GameObject cursorCirclePrefab;
-    public GameObject cursorCircleBigPrefab;
-    private GameObject currentCursorCircle;
-    private GameObject currentCursorCircleBig;
-    private bool callingPikmin = false; 
 
-    public LayerMask groundLayer;
-    public LayerMask pikminLayer;
+    //reference to cursors
+    [SerializeField] private GameObject cursorCircleSmallPrefab;
+    [SerializeField] private GameObject cursorCircleBigPrefab;
+    private GameObject cursorCircleSmall;
+    private GameObject cursorCircleBig;
+
+    //reference to ground and pikmin layers
+    [SerializeField] private LayerMask groundLayer;
+    [SerializeField] private LayerMask pikminLayer;
     public GameObject player;
     public GameObject currentPikmin;
 
+    //vaiables used for states or calculations
+    private bool callingPikmin = false; 
+    private Quaternion cursorRotation = Quaternion.Euler(90f, 0f, 0f);
+    private float cursorOffsetFromGround = 0.5f;
+
+    //corutines
     private Coroutine callPikminCoroutine;
 
     private void Awake()
     {
+        //finds all the actions in the action map
         playerInput = GetComponent<PlayerInput>();
         var actionMap = playerInput.actions.FindActionMap("Pointer");
         positionAction = actionMap.FindAction("Position");
@@ -33,6 +43,7 @@ public class PlayerInteraction : MonoBehaviour
         scrollAction = actionMap.FindAction("Scroll");
     }
 
+    //subscribe to events so that the game is always listeninf for player input
     private void OnEnable()
     {
         positionAction.Enable();
@@ -48,6 +59,8 @@ public class PlayerInteraction : MonoBehaviour
         scrollAction.performed += OnScroll;
     }
 
+    //unsubscribe for events if the gameobject were to get destrypted of inactive 
+    //so it doent lisent to something it cant do anything about
     private void OnDisable()
     {
         positionAction.performed -= OnMouseMove;
@@ -63,33 +76,43 @@ public class PlayerInteraction : MonoBehaviour
         scrollAction.Disable();
     }
 
+    //gets the input form the mouse and uses if for a raycasy that handles a cursor
     private void OnMouseMove(InputAction.CallbackContext context)
     {
         Vector2 mousePosition = context.ReadValue<Vector2>();
-        RaycastFromMouse(mousePosition);
+        HitGroundWithMouse(mousePosition);
     }
 
+    //calls teh method to find pikmin so that the player can thow it
     private void OnLeftClick(InputAction.CallbackContext context)
     {
         FindPikmin();
     }
 
+    //throws the pikmin if they forund one
     private void OnLeftClickRelease(InputAction.CallbackContext context)
     {
-        ThrowPikmin();
+        if (currentPikmin != null)
+        {
+            ThrowPikmin();
+        }
     }
 
-    public void OnTestClick(InputAction.CallbackContext context)
+    //Right click makes calling pikmin is set to true and triggers courutine 
+    //thet triggers a ray that sends a call for the pikmin hit to get them to follow the player 
+    private void OnTestClick(InputAction.CallbackContext context)
     {
-        if (callPikminCoroutine == null) // Start only if not already running
+        if (callPikminCoroutine == null)
         {
+            callingPikmin = true;
             callPikminCoroutine = StartCoroutine(CallPikminContinuously());
         }
     }
 
+    //when no longer clicking right button calling for pikmin is stopped
     private void OnRightClickRelease(InputAction.CallbackContext context)
     {
-        StopCallPikmin();
+        callingPikmin = false;
         if (callPikminCoroutine != null)
         {
             StopCoroutine(callPikminCoroutine);
@@ -97,6 +120,7 @@ public class PlayerInteraction : MonoBehaviour
         }
     }
 
+    //not made yet
     private void OnScroll(InputAction.CallbackContext context)
     {
         Vector2 scrollDelta = context.ReadValue<Vector2>();
@@ -112,91 +136,92 @@ public class PlayerInteraction : MonoBehaviour
         }
     }
 
-    private void RaycastFromMouse(Vector2 mousePosition)
+    //Shoots a constant ray form the camera and mouse position and calls ProjectCursor when the ground is hit
+    private void HitGroundWithMouse(Vector2 mousePosition)
     {
         Ray ray = Camera.main.ScreenPointToRay(mousePosition);
 
         RaycastHit hit;
         if (Physics.Raycast(ray, out hit, Mathf.Infinity, groundLayer))  // Only hit objects on the Ground layer
         {
-            UpdatePointerPosition(hit);
+            ProjectCursor(hit);
         }
     }
 
-    private void UpdatePointerPosition(RaycastHit hit)
+    //projects a cursor cirkle on the ground and handels werther or not i should be big or small
+    private GameObject currentCursorCircleBig; private void ProjectCursor(RaycastHit hit)
     {
         GameObject circle;
 
         if (callingPikmin)
         {
             // If switching to the big cursor, destroy the small one if it exists
-            if (currentCursorCircle != null)
+            if (cursorCircleSmall != null)
             {
-                Destroy(currentCursorCircle);
-                currentCursorCircle = null;
+                Destroy(cursorCircleSmall);
+                cursorCircleSmall = null;
             }
 
-            if (currentCursorCircleBig == null)
+            if (cursorCircleBig == null)
             {
-                currentCursorCircleBig = Instantiate(cursorCircleBigPrefab, hit.point, Quaternion.identity);
-                currentCursorCircleBig.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+                cursorCircleBig = Instantiate(cursorCircleBigPrefab, hit.point, Quaternion.identity);
+                cursorCircleBig.transform.rotation = cursorRotation;
             }
-            circle = currentCursorCircleBig;
+            circle = cursorCircleBig;
         }
         else
         {
             // If switching to the small cursor, destroy the big one if it exists
-            if (currentCursorCircleBig != null)
+            if (cursorCircleBig != null)
             {
-                Destroy(currentCursorCircleBig);
-                currentCursorCircleBig = null;
+                Destroy(cursorCircleBig);
+                cursorCircleBig = null;
             }
 
-            if (currentCursorCircle == null)
+            if (cursorCircleSmall == null)
             {
-                currentCursorCircle = Instantiate(cursorCirclePrefab, hit.point, Quaternion.identity);
-                currentCursorCircle.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+                cursorCircleSmall = Instantiate(cursorCircleSmallPrefab, hit.point, Quaternion.identity);
+                cursorCircleSmall.transform.rotation = cursorRotation;
             }
-            circle = currentCursorCircle;
+            circle = cursorCircleSmall;
         }
-
         // Update position
-        circle.transform.position = new Vector3(hit.point.x, hit.point.y + 0.5f, hit.point.z);
-        circle.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+        circle.transform.position = new Vector3(hit.point.x, hit.point.y + cursorOffsetFromGround, hit.point.z);
     }
 
+    //makes sure the call for pikmin keeps going while calling pikmin 
+    //and also get the mouse input for where the player is looking for pikmin
     private IEnumerator CallPikminContinuously()
     {
         while (true)
         {
+            if (!callingPikmin) break; 
             Vector2 mousePosition = Mouse.current.position.ReadValue();
             CallPikmin(mousePosition);
-            yield return null; // Wait for the next frame to continue the loop
+            yield return null; 
         }
     }
 
+    //A big ray is cast (maches the cursor) to call for pikmin 
+    //if pikmin are found thet are tould to follow the player
     private void CallPikmin(Vector2 mousePosition)
     {
-        callingPikmin = true;
         Ray ray = Camera.main.ScreenPointToRay(mousePosition);
         RaycastHit hit;
-        float rayRadius = 2.5f; // Define the radius of the sphere (larger means bigger area)
+        float rayRadius = 2.5f;
 
-        // Cast a sphere along the ray's path
         if (Physics.SphereCast(ray, rayRadius, out hit, Mathf.Infinity, pikminLayer))
         {
-            // Check if the ray hits a GameObject with the "Pikmin" tag
             if (hit.collider != null && hit.collider.CompareTag("Pikmin"))
             {
                 GameObject pikmin = hit.collider.gameObject;
                 PikminBehavior pikminBehavior = pikmin.GetComponent<PikminBehavior>();
                 if (pikminBehavior != null)
                 {
-                    if (!pikminBehavior.followingPlayer)
+                    if (pikminBehavior.task != PikminBehavior.Task.FollowingTask && pikminBehavior.task != PikminBehavior.Task.Thrown)
                     {
-                        pikminBehavior.target = player;
-                        pikminBehavior.task = PikminBehavior.Task.Following;
-                        pikminBehavior.followingPlayer = true;
+                        pikminBehavior.task = PikminBehavior.Task.FollowingTask;
+                        pikminBehavior.followingTask = PikminBehavior.FollowingTask.GoingTowardsPlayer; 
                     }
                     
                 }
@@ -204,11 +229,8 @@ public class PlayerInteraction : MonoBehaviour
         }
     }
 
-    private void StopCallPikmin()
-    {
-        callingPikmin = false;
-    }
-
+    //it finds all the pikmin in the scene and checks if they are following the player
+    //if they are their distance is calculated and the one that is the closest is set to be picked up
     private void FindPikmin()
     {
         GameObject[] allPikmin = GameObject.FindGameObjectsWithTag("Pikmin");
@@ -217,9 +239,8 @@ public class PlayerInteraction : MonoBehaviour
 
         foreach (GameObject pikmin in allPikmin)
         {
-            // Make sure the Pikmin has a PikminBehavior component before accessing it
             PikminBehavior pikminBehavior = pikmin.GetComponent<PikminBehavior>();
-            if (pikminBehavior != null && pikminBehavior.followingPlayer)
+            if (pikminBehavior != null && pikminBehavior.task == PikminBehavior.Task.FollowingTask)
             {
                 float distance = Vector3.Distance(player.transform.position, pikmin.transform.position);
                 if (distance < closestDistance)
@@ -230,81 +251,75 @@ public class PlayerInteraction : MonoBehaviour
             }
         }
 
-        // After finding the closest Pikmin, pick it up
-        if (closestPikmin != null)
-        {
-            currentPikmin = closestPikmin;
-            PickUpPikmin(currentPikmin);
-        }
+        currentPikmin = closestPikmin;
+        PickUpPikmin(currentPikmin);
+
     }
 
+    //sets the task of the closest pikmin to lifter which positions the pikmin on top of the player
     private void PickUpPikmin(GameObject pikmin)
     {
-        // Call PickedUp on the Pikmin behavior to disable its agent and activate its Rigidbody physics
         PikminBehavior pikminBehavior = pikmin.GetComponent<PikminBehavior>();
         if (pikminBehavior != null)
         {
-            pikminBehavior.PickedUp();  // Disable NavMeshAgent and enable Rigidbody
+            pikminBehavior.task = PikminBehavior.Task.Lifted;
         }
-
-        // Position the Pikmin in front of the player
-        pikmin.transform.position = player.transform.position + Vector3.up * 1.5f; // Adjust height
-        pikmin.transform.parent = player.transform; // Attach to player
     }
 
     private void ThrowPikmin()
     {
-        if (currentPikmin != null && currentCursorCircle != null)
+        // Get the Pikmin's behavior script to access its Throw method
+        PikminBehavior pikminBehavior = currentPikmin.GetComponent<PikminBehavior>();
+        if (pikminBehavior != null)
         {
-            // Get the Pikmin's behavior script to access its Throw method
-            PikminBehavior pikminBehavior = currentPikmin.GetComponent<PikminBehavior>();
-            if (pikminBehavior != null)
+            // Set the Pikmin's task to thrown (turn on physics)
+            pikminBehavior.task = PikminBehavior.Task.Thrown;
+
+            // Get the target position (cursor circle position)
+            Vector3 targetPosition = cursorCircleSmall.transform.position;
+
+            // Calculate the direction and distance to the target position
+            Vector3 direction = targetPosition - currentPikmin.transform.position;
+            direction.y = 0; // Ignore vertical distance for the horizontal direction calculation
+
+            float horizontalDistance = direction.magnitude; // Calculate the horizontal distance
+
+            // Gravity constant (assuming Earth gravity)
+            float gravity = Mathf.Abs(Physics.gravity.y); // Get absolute value for consistency
+
+            // Choose an optimal launch angle (45 degrees is a good default for range)
+            float angle = 45f;
+
+            // Calculate the initial velocity needed to reach the target
+            float launchVelocity = Mathf.Sqrt(horizontalDistance * gravity / Mathf.Sin(2 * Mathf.Deg2Rad * angle));
+
+            // Decompose the launch velocity into horizontal and vertical components
+            float velocityX = launchVelocity * Mathf.Cos(Mathf.Deg2Rad * angle);
+            float velocityY = launchVelocity * Mathf.Sin(Mathf.Deg2Rad * angle);
+
+            // Normalize the direction vector
+            direction.Normalize();
+
+            // Calculate the final velocity to apply to the Pikmin
+            Vector3 velocity = direction * velocityX + Vector3.up * velocityY;
+
+            // Now, let's check if the velocity overshoots. We will slightly reduce the velocity.
+            // Reduce the velocity in case of overshoot
+            float overshootCorrection = 0.9f; // Reduce the force slightly to prevent overshooting
+            velocity *= overshootCorrection;
+
+            // Apply the calculated velocity to the Pikmin's Rigidbody
+            Rigidbody rb = currentPikmin.GetComponent<Rigidbody>();
+            if (rb != null)
             {
-                // Get the target position (cursor circle position)
-                Vector3 targetPosition = currentCursorCircle.transform.position;
-
-                // Calculate the direction and distance to the target position
-                Vector3 direction = targetPosition - currentPikmin.transform.position;
-                direction.y = 0; // Ignore vertical distance for the horizontal direction calculation
-
-                float horizontalDistance = direction.magnitude; // Calculate the horizontal distance
-
-                // Gravity constant (assuming Earth gravity)
-                float gravity = Mathf.Abs(Physics.gravity.y); // Get absolute value for consistency
-
-                // Choose an optimal launch angle (45 degrees is a good default for range)
-                float angle = 45f;
-
-                // Calculate the initial velocity needed to reach the target
-                float launchVelocity = Mathf.Sqrt(horizontalDistance * gravity / Mathf.Sin(2 * Mathf.Deg2Rad * angle));
-
-                // Decompose the launch velocity into horizontal and vertical components
-                float velocityX = launchVelocity * Mathf.Cos(Mathf.Deg2Rad * angle);
-                float velocityY = launchVelocity * Mathf.Sin(Mathf.Deg2Rad * angle);
-
-                // Normalize the direction vector
-                direction.Normalize();
-
-                // Calculate the final velocity to apply to the Pikmin
-                Vector3 velocity = direction * velocityX + Vector3.up * velocityY;
-
-                // Now, let's check if the velocity overshoots. We will slightly reduce the velocity.
-                // Reduce the velocity in case of overshoot
-                float overshootCorrection = 0.9f; // Reduce the force slightly to prevent overshooting
-                velocity *= overshootCorrection;
-
-                // Apply the calculated velocity to the Pikmin's Rigidbody
-                Rigidbody rb = currentPikmin.GetComponent<Rigidbody>();
-                if (rb != null)
-                {
-                    rb.isKinematic = false;  // Enable physics
-                    rb.velocity = velocity;  // Apply the calculated velocity
-                }
-
-                // Detach the Pikmin from the player and reset the reference
-                currentPikmin.transform.parent = null;
-                currentPikmin = null;
+                rb.isKinematic = false;
+                rb.velocity = velocity;  // Apply the calculated velocity
             }
+
+            // Detach the Pikmin from the player and reset the reference
+            currentPikmin = null;
         }
     }
+
+    
 }
