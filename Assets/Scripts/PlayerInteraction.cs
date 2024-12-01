@@ -18,11 +18,12 @@ public class PlayerInteraction : MonoBehaviour
     private GameObject cursorCircleSmall;
     private GameObject cursorCircleBig;
 
-    //reference to ground and pikmin layers
+    //reference to player and ground, treasure and pikmin layers
     [SerializeField] private LayerMask groundLayer;
+    [SerializeField] private LayerMask treasureLayer;
     [SerializeField] private LayerMask pikminLayer;
     public GameObject player;
-    public GameObject currentPikmin;
+    [HideInInspector] GameObject currentPikmin;
 
     //vaiables used for states or calculations
     private bool callingPikmin = false; 
@@ -141,8 +142,10 @@ public class PlayerInteraction : MonoBehaviour
     {
         Ray ray = Camera.main.ScreenPointToRay(mousePosition);
 
+        int combinedLayerMask = groundLayer | treasureLayer;
+
         RaycastHit hit;
-        if (Physics.Raycast(ray, out hit, Mathf.Infinity, groundLayer))  // Only hit objects on the Ground layer
+        if (Physics.Raycast(ray, out hit, Mathf.Infinity, combinedLayerMask))  // Raycast against both layers
         {
             ProjectCursor(hit);
         }

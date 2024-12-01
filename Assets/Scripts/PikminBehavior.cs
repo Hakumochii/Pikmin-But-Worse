@@ -9,19 +9,18 @@ public class PikminBehavior : MonoBehaviour
     private NavMeshAgent agent;
     private Rigidbody rb;
     private GameObject player;
-    private GameObject currentTressure;
+    private GameObject currentTreasure;
 
     //variables used in calculations
     private float PikminDistanceAbovePlayer = 1.5f;
-    [SerializeField] private float ThresholdFromTressure = 0.5f;
+    [SerializeField] private Vector3 positionAroundTreasure;
 
     //enumerators for diffrent taskes of a pikmin
-    public enum Task { Idle, FollowingTask, Lifted, Thrown, Fighting, CarryingTressure, Dying }
+    public enum Task { Idle, FollowingTask, Lifted, Thrown, Fighting, MovingToTreasure, CarryingTreasure, Dying }
     public Task task = Task.Idle;
 
     public enum FollowingTask { GoingTowardsPlayer, Waiting }
     public FollowingTask followingTask;
-
 
     private void Start()
     {
@@ -54,8 +53,11 @@ public class PikminBehavior : MonoBehaviour
                 break;
             case Task.Fighting:
                 break;
-            case Task.CarryingTressure:
-                LiftingTressure();
+            case Task.MovingToTreasure:
+                CheckTreasureArrival(positionAroundTreasure);
+                break;
+            case Task.CarryingTreasure:
+                LiftingTreasure();
                 break;
             case Task.Dying:
                 break;
@@ -109,56 +111,63 @@ public class PikminBehavior : MonoBehaviour
         transform.parent = null;
     }
 
-    private void GoToTressure()
+    private void GoToTreasure()
     {
-        // Get the collider bounds of the treasure
-        Collider treasureCollider = currentTressure.GetComponent<Collider>();
-        Bounds treasureBounds = treasureCollider.bounds;
+        agent.enabled = true;
+        rb.isKinematic = true;
+        positionAroundTreasure = AddPikminPositionAroundTreasure();
+        agent.SetDestination(positionAroundTreasure);
+        task = Task.MovingToTreasure; 
+    }
 
-        // Define a random position around the treasure's collider
-        Vector3 randomOffset = new Vector3(
-            Random.Range(treasureBounds.min.x, treasureBounds.max.x), // Random X position within bounds
-            treasureBounds.center.y, // Keep the Y position at the center (or adjust for height)
-            Random.Range(treasureBounds.min.z, treasureBounds.max.z)  // Random Z position within bounds
-        );
+    //make positions for pikmin based on pikmin recuired and treasurecollider and add to dictionary
+    private Vector3 AddPikminPositionAroundTreasure()
+    {
+        Treasure treasureScript = currentTreasure.GetComponent<Treasure>();
+        GameObject treasureBody = GameObject.FindWithTag("TreasureBody");
+        SphereCollider treasureCollider = treasureBody.GetComponent<SphereCollider>();
 
-        // Move the Pikmin towards the random position near the treasure
-        Vector3 direction = (randomOffset - transform.position).normalized; // Find the direction vector
-        float moveSpeed = 3f; // Adjust this to your preferred speed
+        float radius = treasureCollider.radius * transform.localScale.x;
+        // Calculate angle in radians for each Pikmin position
+        float angle = 2 * Mathf.PI * (treasureScript.PikminAcquired % treasureScript.PikminRequired) / treasureScript.PikminRequired;
+        // Use cosine and sine to place positions in a circular pattern
+        float x = treasureCollider.bounds.center.x + radius * Mathf.Cos(angle);
+        float z = treasureCollider.bounds.center.z + radius * Mathf.Sin(angle);
+        float y = treasureCollider.bounds.center.y;
 
-        // Apply the movement (using Rigidbody to move the Pikmin)
-        rb.isKinematic = false;
-        rb.velocity = direction * moveSpeed; // Move Pikmin toward the random position
+        return new Vector3(x, y, z);
+    }
 
-        // Look at the treasure while moving (optional)
-        transform.LookAt(currentTressure.transform.position);
-
-        // When the Pikmin reaches the target (within a threshold distance)
-        if (Vector3.Distance(transform.position, randomOffset) < ThresholdFromTressure)
+    private void CheckTreasureArrival(Vector3 positionAroundTreasure)
+    {
+        if (transform.position == positionAroundTreasure)
         {
-            task = Task.CarryingTressure;
-            rb.velocity = Vector3.zero; // Stop moving when the Pikmin reaches the destination
+            task = Task.CarryingTreasure; 
         }
     }
 
-
-    private void LiftingTressure()
+    private void LiftingTreasure()
     {
-        Tressure tressure = currentTressure.GetComponent<Tressure>();
-        tressure.PikminAcuired += 1;
+        if (currentTreasure == null) 
+        {
+            Debug.LogError("currentTreasure is null!");
+            return; // Return early to avoid the NullReferenceException
+        } 
+        Treasure treasure = currentTreasure.GetComponent<Treasure>();
+        treasure.PikminAcquired += 1;
         agent.enabled = false;
         rb.isKinematic = false;
-        transform.parent = currentTressure.transform;
+        transform.parent = currentTreasure.transform;
     }
 
-    private void StopLiftingTressure()
+    /*private void StopLiftingTreasure()
     {
-        Tressure tressure = currentTressure.GetComponent<Tressure>();
-        tressure.PikminAcuired -= 1;
+        Treasure treasure = currentTreasure.GetComponent<Treasure>();
+        treasure.PikminAcquired -= 1;
         agent.enabled = true;
         rb.isKinematic = true;
         transform.parent = null;
-    }
+    }*/
 
     private void OnTriggerEnter(Collider collision)
     {
@@ -182,10 +191,10 @@ public class PikminBehavior : MonoBehaviour
             task = Task.Idle;
         }
 
-        if (collision.gameObject.CompareTag("Tressure") && task != Task.FollowingTask)
+        if (collision.gameObject.CompareTag("Treasure"))
         {
-            currentTressure = collision.gameObject;
-            GoToTressure();
+            currentTreasure = collision.gameObject;
+            GoToTreasure();
         }
 
     }
@@ -199,15 +208,15 @@ public class PikminBehavior : MonoBehaviour
             followingTask = FollowingTask.GoingTowardsPlayer;
         }
 
-        if (collision.gameObject.CompareTag("Tressure"))
+        /*if (collision.gameObject.CompareTag("Treasure"))
         {
-            currentTressure = null;
+            currentTreasure = null;
 
-            if (task == Task.CarryingTressure)
+            if (task == Task.CarryingTreasure)
             {
-                StopLiftingTressure();
+                StopLiftingTreasure();
             }
-        }
+        }*/
     } 
 
 }
