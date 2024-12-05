@@ -5,18 +5,7 @@ using UnityEngine;
 public class Treasure : MonoBehaviour
 {
     //Set up reference to pikmin and tressure collider
-    [SerializeField] private int pikminRequired;
-    public int PikminRequired
-    {
-        get { return pikminRequired; } 
-        set { pikminRequired = value; }
-    }
-    private int pikminAcquired;
-    public int PikminAcquired
-    {
-        get { return pikminAcquired; } 
-        set { pikminAcquired = value; }
-    }
+    public Dictionary<GameObject, bool> pikmin = new Dictionary<GameObject, bool>
 
     //references for moving the treasure
     private UnityEngine.AI.NavMeshAgent agent;
@@ -40,21 +29,35 @@ public class Treasure : MonoBehaviour
 
     private void Update()
     {
-        //check for different sattes to deterine the behavior of the treasure
-        if (pikminAcquired == pikminRequired)
+        if (AreAllPikminHelping())
         {
             MoveToBase();
+            Debug.Log("Moving to base");
         }
         else
         {
             LayOnGround();
         }
 
-        if (transform.position == basePosition)
+        if (Vector3.Distance(transform.position, basePosition) < 0.1f) 
         {
             TreasureCollectedComplete();
         }
     }
+
+    // Method to check if all Pikmin are helping
+    private bool AreAllPikminHelping()
+    {
+        foreach (bool isHelping in pikmin.Values)
+        {
+            if (!isHelping)
+            {
+                return false;
+            }
+        }
+        return true; 
+    }
+
 
     //move treasure towards base if recuired pikmin is reached
     private void MoveToBase()

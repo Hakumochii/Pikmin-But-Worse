@@ -12,7 +12,7 @@ public class PikminBehavior : MonoBehaviour
     private GameObject currentTreasure;
 
     //variables used in calculations
-    private float PikminDistanceAbovePlayer = 1.5f;
+    private float pikminDistanceAbovePlayer = 1.5f;
     [SerializeField] private Vector3 positionAroundTreasure;
 
     //enumerators for diffrent taskes of a pikmin
@@ -100,7 +100,7 @@ public class PikminBehavior : MonoBehaviour
     private void PickedUp()
     {
         agent.enabled = false;
-        transform.position = player.transform.position + Vector3.up * PikminDistanceAbovePlayer;
+        transform.position = player.transform.position + Vector3.up * pikminDistanceAbovePlayer;
         transform.parent = player.transform; 
     }
 
@@ -121,40 +121,43 @@ public class PikminBehavior : MonoBehaviour
     }
 
     //make positions for pikmin based on pikmin recuired and treasurecollider and add to dictionary
-    private Vector3 AddPikminPositionAroundTreasure()
+    private Vector3 GetPositionAroundTreasure()
     {
-        Treasure treasureScript = currentTreasure.GetComponent<Treasure>();
-        GameObject treasureBody = GameObject.FindWithTag("TreasureBody");
-        SphereCollider treasureCollider = treasureBody.GetComponent<SphereCollider>();
+        Treasure treasure = currentTreasure.GetComponent<Treasure>();
+        foreach (KeyValuePair<GameObject, bool> entry in treasure.pikmin)
+        {
+            GameObject pikminKey = entry.Key;  // This is the current Pikmin (key)
+            bool isHelping = entry.Value;      // This is the value (true or false)
 
-        float radius = treasureCollider.radius * transform.localScale.x;
-        // Calculate angle in radians for each Pikmin position
-        float angle = 2 * Mathf.PI * (treasureScript.PikminAcquired % treasureScript.PikminRequired) / treasureScript.PikminRequired;
-        // Use cosine and sine to place positions in a circular pattern
-        float x = treasureCollider.bounds.center.x + radius * Mathf.Cos(angle);
-        float z = treasureCollider.bounds.center.z + radius * Mathf.Sin(angle);
-        float y = treasureCollider.bounds.center.y;
-
-        return new Vector3(x, y, z);
+            if (!isHelping)
+            {
+                isHelping = true;
+                return pikminKey.transform.position; 
+            }
+        }
+        return null; 
+        
     }
 
     private void CheckTreasureArrival(Vector3 positionAroundTreasure)
     {
-        if (transform.position == positionAroundTreasure)
+            float threshold = 0.1f; // Small tolerance for reaching the position
+        if (Vector3.Distance(transform.position, positionAroundTreasure) < threshold)
         {
+            Debug.Log("Pikmin has reached the treasure position.");
             task = Task.CarryingTreasure; 
         }
     }
 
     private void LiftingTreasure()
     {
+        Debug.Log("Lifting treasure");
         if (currentTreasure == null) 
         {
             Debug.LogError("currentTreasure is null!");
             return; // Return early to avoid the NullReferenceException
         } 
         Treasure treasure = currentTreasure.GetComponent<Treasure>();
-        treasure.PikminAcquired += 1;
         agent.enabled = false;
         rb.isKinematic = false;
         transform.parent = currentTreasure.transform;
@@ -186,7 +189,7 @@ public class PikminBehavior : MonoBehaviour
         }  
 
         //if the pikmin i touching the ground and it is not followinf the player it will just be in idle 
-        if (collision.gameObject.layer == LayerMask.NameToLayer("Ground") && task != Task.FollowingTask)
+        if (collision.gameObject.layer == LayerMask.NameToLayer("Ground") && task == Task.Thrown)
         {
             task = Task.Idle;
         }
