@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
+using System;
 
 public class PikminBehavior : MonoBehaviour
 {
@@ -26,6 +27,9 @@ public class PikminBehavior : MonoBehaviour
     public enum PikminType { Blue, Red, Yellow};
     public PikminType pikminType;
 
+    public static event Action<int> OnPikminFollowStateChanged; 
+    private bool _isFollowingPlayer = false; 
+
     private void Start()
     {
         // Initialize the NavMeshAgent and Rigidbody components
@@ -39,6 +43,15 @@ public class PikminBehavior : MonoBehaviour
 
     private void Update()
     {
+        bool wasFollowing = _isFollowingPlayer;
+        _isFollowingPlayer = (task == Task.FollowingTask);
+
+        if (_isFollowingPlayer != wasFollowing)
+        {
+            // Notify state change (+1 if following, -1 if stopped)
+            OnPikminFollowStateChanged?.Invoke(_isFollowingPlayer ? 1 : -1);
+        }
+
         //switching tasks based on differnet factors
         switch (task)
         {
