@@ -4,12 +4,13 @@ using UnityEngine;
 
 public class Treasure : MonoBehaviour
 {
-    //Set up reference to pikmin and tressure collider
-    public Dictionary<GameObject, bool> pikmin = new Dictionary<GameObject, bool>
-
+    public List<GameObject> spotList = new List<GameObject>();
+    public Dictionary<GameObject, bool> spot = new Dictionary<GameObject, bool>();
+    
     //references for moving the treasure
     private UnityEngine.AI.NavMeshAgent agent;
     public GameObject playerBase;
+    public GameObject treasureBody;
     private Vector3 basePosition;
 
     //variable for collecting treasure completion
@@ -25,11 +26,17 @@ public class Treasure : MonoBehaviour
         //get variables for movemnet of treasure
         agent = GetComponent<UnityEngine.AI.NavMeshAgent>();
         basePosition = playerBase.transform.position;
+
+        // Populate the Dictionary from the List
+        foreach (var spotObject in spotList)
+        {
+            spot[spotObject] = false;
+        }
     }
 
     private void Update()
     {
-        if (AreAllPikminHelping())
+        if (AreAllSpotsTaken())
         {
             MoveToBase();
             Debug.Log("Moving to base");
@@ -46,11 +53,11 @@ public class Treasure : MonoBehaviour
     }
 
     // Method to check if all Pikmin are helping
-    private bool AreAllPikminHelping()
+    private bool AreAllSpotsTaken()
     {
-        foreach (bool isHelping in pikmin.Values)
+        foreach (bool isTaken in spot.Values)
         {
-            if (!isHelping)
+            if (!isTaken)
             {
                 return false;
             }
@@ -58,12 +65,12 @@ public class Treasure : MonoBehaviour
         return true; 
     }
 
-
     //move treasure towards base if recuired pikmin is reached
     private void MoveToBase()
     {
         agent.isStopped = false;
-        agent.baseOffset = 3f;
+        agent.updateRotation = false;
+        agent.baseOffset = 1f;
         agent.SetDestination(basePosition);
     }
 

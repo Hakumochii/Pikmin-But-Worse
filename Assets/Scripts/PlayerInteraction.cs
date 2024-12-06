@@ -223,6 +223,10 @@ public class PlayerInteraction : MonoBehaviour
                 {
                     if (pikminBehavior.task != PikminBehavior.Task.FollowingTask && pikminBehavior.task != PikminBehavior.Task.Thrown)
                     {
+                        if (pikminBehavior.task == PikminBehavior.Task.CarryingTreasure)
+                        {
+                            pikminBehavior.StopLiftingTreasure();
+                        }
                         pikminBehavior.task = PikminBehavior.Task.FollowingTask;
                         pikminBehavior.followingTask = PikminBehavior.FollowingTask.GoingTowardsPlayer; 
                     }
@@ -269,7 +273,7 @@ public class PlayerInteraction : MonoBehaviour
         }
     }
 
-    private void ThrowPikmin()
+    /*private void ThrowPikmin()
     {
         // Get the Pikmin's behavior script to access its Throw method
         PikminBehavior pikminBehavior = currentPikmin.GetComponent<PikminBehavior>();
@@ -322,7 +326,72 @@ public class PlayerInteraction : MonoBehaviour
             // Detach the Pikmin from the player and reset the reference
             currentPikmin = null;
         }
+    }*/
+
+    private void ThrowPikmin()
+    {
+        // Get the Pikmin's behavior script to access its Throw method
+        PikminBehavior pikminBehavior = currentPikmin.GetComponent<PikminBehavior>();
+        if (pikminBehavior != null)
+        {
+            // Set the Pikmin's task to thrown (turn on physics)
+            pikminBehavior.task = PikminBehavior.Task.Thrown;
+
+            // Get the target position (cursor circle position)
+            Vector3 targetPosition = cursorCircleSmall.transform.position;
+
+            // Calculate the direction and distance to the target position
+            Vector3 direction = targetPosition - currentPikmin.transform.position;
+            direction.y = 0; // Ignore vertical distance for the horizontal direction calculation
+
+            float horizontalDistance = direction.magnitude; // Calculate the horizontal distance
+
+            // Gravity constant (assuming Earth gravity)
+            float gravity = Mathf.Abs(Physics.gravity.y); // Get absolute value for consistency
+
+            // Choose an optimal launch angle (45 degrees is a good default for range)
+            float angle = 45f;
+
+            // Declare throwHeightFactor outside of the if-else block
+            float throwHeightFactor = 1f; // Default value for Pikmin types other than Yellow
+
+            // Modify the throw height based on Pikmin type
+            if (pikminBehavior.pikminType == PikminBehavior.PikminType.Yellow)
+            {
+                throwHeightFactor = 1.5f; // Adjust the factor for Yellow Pikmin
+            }
+
+            // Calculate the initial velocity needed to reach the target
+            float launchVelocity = Mathf.Sqrt(horizontalDistance * gravity / Mathf.Sin(2 * Mathf.Deg2Rad * angle));
+
+            // Decompose the launch velocity into horizontal and vertical components
+            float velocityX = launchVelocity * Mathf.Cos(Mathf.Deg2Rad * angle);
+            float velocityY = (launchVelocity * Mathf.Sin(Mathf.Deg2Rad * angle)) * throwHeightFactor; // Apply the height factor here
+
+            // Normalize the direction vector
+            direction.Normalize();
+
+            // Calculate the final velocity to apply to the Pikmin
+            Vector3 velocity = direction * velocityX + Vector3.up * velocityY;
+
+            // Now, let's check if the velocity overshoots. We will slightly reduce the velocity.
+            // Reduce the velocity in case of overshoot
+            float overshootCorrection = 0.9f; // Reduce the force slightly to prevent overshooting
+            velocity *= overshootCorrection;
+
+            // Apply the calculated velocity to the Pikmin's Rigidbody
+            Rigidbody rb = currentPikmin.GetComponent<Rigidbody>();
+            if (rb != null)
+            {
+                rb.isKinematic = false;
+                rb.velocity = velocity;  // Apply the calculated velocity
+            }
+
+            // Detach the Pikmin from the player and reset the reference
+            currentPikmin = null;
+        }
     }
+
 
     
 }
