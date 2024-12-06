@@ -7,8 +7,8 @@ using System;
 public class PikminBehavior : MonoBehaviour
 {
     //variables needed for moving pikmin around
-    private NavMeshAgent agent;
-    private Rigidbody rb;
+    public NavMeshAgent agent;
+    public Rigidbody rb;
     private GameObject player;
     private GameObject currentTreasure;
 
@@ -29,6 +29,7 @@ public class PikminBehavior : MonoBehaviour
 
     public static event Action<int> OnPikminFollowStateChanged; 
     private bool _isFollowingPlayer = false; 
+    public GameObject UIManager;
 
     private void Start()
     {
@@ -105,7 +106,7 @@ public class PikminBehavior : MonoBehaviour
     }
 
     //pikmin stands still if they get too close to the player while following them
-    private void Wait()
+    public void Wait()
     {
         agent.enabled = true;
         rb.isKinematic = true;
@@ -198,6 +199,7 @@ public class PikminBehavior : MonoBehaviour
         yield return new WaitForSeconds(2f);
         agent.isStopped = true;
         yield return new WaitForSeconds(5f);
+        UIManager.GetComponent<UIManager>().DecreasePikminCount();
         Destroy(gameObject);
     }
 

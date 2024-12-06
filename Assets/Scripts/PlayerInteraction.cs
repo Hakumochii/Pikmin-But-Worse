@@ -11,6 +11,9 @@ public class PlayerInteraction : MonoBehaviour
     private InputAction leftClickAction;
     private InputAction rightClickAction;
     private InputAction scrollAction;
+    private InputAction QAction;
+    private InputAction EAction;
+    private InputAction spaceAction;
 
     //reference to cursors
     [SerializeField] private GameObject cursorCircleSmallPrefab;
@@ -37,11 +40,14 @@ public class PlayerInteraction : MonoBehaviour
     {
         //finds all the actions in the action map
         playerInput = GetComponent<PlayerInput>();
-        var actionMap = playerInput.actions.FindActionMap("Pointer");
+        var actionMap = playerInput.actions.FindActionMap("Buttons");
         positionAction = actionMap.FindAction("Position");
         leftClickAction = actionMap.FindAction("LeftClick");
         rightClickAction = actionMap.FindAction("RightClick");
         scrollAction = actionMap.FindAction("Scroll");
+        QAction = actionMap.FindAction("Q");
+        EAction = actionMap.FindAction("E");
+        spaceAction = actionMap.FindAction("Space");
     }
 
     //subscribe to events so that the game is always listeninf for player input
@@ -51,6 +57,9 @@ public class PlayerInteraction : MonoBehaviour
         leftClickAction.Enable();
         rightClickAction.Enable();
         scrollAction.Enable();
+        QAction.Enable();
+        EAction.Enable();
+        spaceAction.Enable();
 
         positionAction.performed += OnMouseMove;
         leftClickAction.performed += OnLeftClick;
@@ -58,6 +67,9 @@ public class PlayerInteraction : MonoBehaviour
         rightClickAction.performed += OnTestClick;
         rightClickAction.canceled += OnRightClickRelease;
         scrollAction.performed += OnScroll;
+        QAction.performed += OnQ;
+        EAction.performed += OnE;
+        spaceAction.performed += OnSpace;
     }
 
     //unsubscribe for events if the gameobject were to get destrypted of inactive 
@@ -70,11 +82,17 @@ public class PlayerInteraction : MonoBehaviour
         rightClickAction.performed -= OnTestClick;
         rightClickAction.canceled -= OnRightClickRelease;
         scrollAction.performed -= OnScroll;
+        QAction.performed -= OnQ;
+        EAction.performed -= OnE;
+        spaceAction.performed -= OnSpace;
 
         positionAction.Disable();
         leftClickAction.Disable();
         rightClickAction.Disable();
         scrollAction.Disable();
+        QAction.Disable();
+        EAction.Disable();
+        spaceAction.Disable();
     }
 
     //gets the input form the mouse and uses if for a raycasy that handles a cursor
@@ -136,6 +154,21 @@ public class PlayerInteraction : MonoBehaviour
             Debug.Log("Scrolling Down");
         }
     }
+
+    private void OnQ(InputAction.CallbackContext context)
+    {
+        DismissPikmin();
+    }
+
+    private void OnE(InputAction.CallbackContext context)
+    {
+        ChangePikmin();
+    }
+
+    private void OnSpace(InputAction.CallbackContext context)
+    {
+    }
+
 
     //Shoots a constant ray form the camera and mouse position and calls ProjectCursor when the ground is hit
     private void HitGroundWithMouse(Vector2 mousePosition)
@@ -243,7 +276,7 @@ public class PlayerInteraction : MonoBehaviour
         GameObject[] allPikmin = GameObject.FindGameObjectsWithTag("Pikmin");
         GameObject closestPikmin = null;
         float closestDistance = Mathf.Infinity;
-
+        
         foreach (GameObject pikmin in allPikmin)
         {
             PikminBehavior pikminBehavior = pikmin.GetComponent<PikminBehavior>();
@@ -334,6 +367,127 @@ public class PlayerInteraction : MonoBehaviour
 
             // Detach the Pikmin from the player and reset the reference
             currentPikmin = null;
+        }
+    }
+
+    private void DismissPikmin()
+    {
+        GameObject[] allPikmin = GameObject.FindGameObjectsWithTag("Pikmin");
+        
+        foreach (GameObject pikmin in allPikmin)
+        {
+            PikminBehavior pikminBehavior = pikmin.GetComponent<PikminBehavior>();
+            if (pikminBehavior != null && pikminBehavior.task == PikminBehavior.Task.FollowingTask)
+            {
+                pikminBehavior.task = PikminBehavior.Task.Idle;
+            }
+        }
+    }
+
+    private void ChangePikmin()
+    {
+        // Get all Pikmin in the scene
+        GameObject[] allPikmin = GameObject.FindGameObjectsWithTag("Pikmin");
+        List<GameObject> followingPikmin = new List<GameObject>();
+
+        // Get the current Pikmin behavior
+        PikminBehavior currentPikminBehavior = currentPikmin.GetComponent<PikminBehavior>();
+        
+        // Add all following Pikmin to the list
+        foreach (GameObject pikmin in allPikmin)
+        {
+            PikminBehavior pikminBehavior = pikmin.GetComponent<PikminBehavior>();
+            if (pikminBehavior != null && pikminBehavior.task == PikminBehavior.Task.FollowingTask)
+            {
+                followingPikmin.Add(pikmin);
+            }
+        }
+
+
+        // Create a list of available Pikmin types that are following the player
+        List<PikminBehavior.PikminType> availableTypes = new List<PikminBehavior.PikminType>();
+        
+        foreach (GameObject pikmin in followingPikmin)
+        {
+            PikminBehavior pikminBehavior = pikmin.GetComponent<PikminBehavior>();
+            if (!availableTypes.Contains(pikminBehavior.pikminType))
+            {
+                availableTypes.Add(pikminBehavior.pikminType);
+            }
+        }
+
+        // If no following Pikmin are available, do nothing
+        if (availableTypes.Count == 0)
+        {
+            return;
+        }
+
+        if (availableTypes.Count > 1)
+        {
+            // List of all Pikmin types (could also be an array or other collection type)
+            PikminBehavior.PikminType[] pikminTypes = (PikminBehavior.PikminType[])System.Enum.GetValues(typeof(PikminBehavior.PikminType));
+                
+            // Find the next type in the list (cyclical)
+            PikminBehavior.PikminType currentType = currentPikminBehavior.pikminType;
+            int nextTypeIndex = (System.Array.IndexOf(pikminTypes, currentType) + 1) % pikminTypes.Length;
+            PikminBehavior.PikminType nextType = pikminTypes[nextTypeIndex];
+
+            // Search for the next Pikmin of the next type
+            foreach (GameObject pikmin in followingPikmin)
+            {
+                PikminBehavior pikminBehavior = pikmin.GetComponent<PikminBehavior>();
+                
+                // If the Pikmin's type matches the next type, select it
+                if (pikminBehavior != null && pikminBehavior.pikminType == nextType)
+                {
+                    // Detach the current Pikmin from the player
+                    currentPikminBehavior.transform.parent = null;
+
+                    // Move the current Pikmin to the new Pikmin's position
+                    currentPikmin.transform.position = pikmin.transform.position;
+
+                    // Set the task to FollowingTask
+                    currentPikminBehavior.task = PikminBehavior.Task.FollowingTask;
+
+                    // Pick up the new Pikmin
+                    currentPikmin = pikmin;
+                    PickUpPikmin(currentPikmin);
+
+                    break; // Exit the loop once we find the next Pikmin
+                }
+            }
+        }
+        else
+        {
+            // Find the next Pikmin type in the list (cyclical)
+            PikminBehavior.PikminType currentType = currentPikminBehavior.pikminType;
+            int nextTypeIndex = (availableTypes.IndexOf(currentType) + 1) % availableTypes.Count;
+            PikminBehavior.PikminType nextType = availableTypes[nextTypeIndex];
+
+            // Search for the next Pikmin of the next type
+            foreach (GameObject pikmin in followingPikmin)
+            {
+                PikminBehavior pikminBehavior = pikmin.GetComponent<PikminBehavior>();
+
+                // If the Pikmin's type matches the next type, select it
+                if (pikminBehavior != null && pikminBehavior.pikminType == nextType)
+                {
+                    // Detach the current Pikmin from the player
+                    currentPikminBehavior.transform.parent = null;
+
+                    // Move the current Pikmin to the new Pikmin's position
+                    currentPikmin.transform.position = pikmin.transform.position;
+
+                    // Set the task to FollowingTask
+                    currentPikminBehavior.task = PikminBehavior.Task.FollowingTask;
+
+                    // Pick up the new Pikmin
+                    currentPikmin = pikmin;
+                    PickUpPikmin(currentPikmin);
+
+                    break; // Exit the loop once we find the next Pikmin
+                }
+            }
         }
     }
 

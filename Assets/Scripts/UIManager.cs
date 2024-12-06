@@ -6,7 +6,10 @@ using TMPro;
 public class UIManager : MonoBehaviour
 {
     public int pikminFollowing;
+    private int pikminOverall = 3;
     public TextMeshProUGUI pikminCountText;
+    public TextMeshProUGUI treasureCountText;
+    public TextMeshProUGUI pikminAllText;
     public GameObject redPicture;
     public GameObject bluePicture;
     public GameObject yellowPicture;
@@ -17,6 +20,7 @@ public class UIManager : MonoBehaviour
     {
         TurnOffAllPictures();
         PikminBehavior.OnPikminFollowStateChanged += UpdatePikminCount;
+        pikminAllText.text = pikminOverall.ToString();
     }
 
     void Update()
@@ -76,5 +80,11 @@ public class UIManager : MonoBehaviour
     {
         pikminFollowing += change;
         pikminCountText.text = pikminFollowing.ToString();
+    }
+
+    public void DecreasePikminCount()
+    {
+        pikminOverall--;
+        pikminAllText.text = pikminOverall.ToString();
     }
 }
