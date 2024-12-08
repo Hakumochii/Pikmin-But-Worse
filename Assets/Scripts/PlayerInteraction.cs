@@ -36,8 +36,43 @@ public class PlayerInteraction : MonoBehaviour
     //corutines
     private Coroutine callPikminCoroutine;
 
+    private static PlayerInteraction instance;
+    public static PlayerInteraction Instance
+    {
+        // Ensure there is always an instance of the sound manager
+        get
+        {
+            // Check if the instance is null or has been destroyed
+            if (instance == null || instance.gameObject == null)
+            {
+                // Find an existing instance in the scene
+                instance = FindObjectOfType<PlayerInteraction>();
+
+                // If no instance exists, create a new one
+                if (instance == null)
+                {
+                    GameObject obj = new GameObject(nameof(PlayerInteraction));
+                    instance = obj.AddComponent<PlayerInteraction>();
+                }
+            }
+            return instance;
+        }
+    }
+
     private void Awake()
     {
+        // Ensure the instance isn't destroyed when loading new scenes
+        if (instance == null || instance.gameObject == null)
+        {
+            instance = this;
+        }
+        else if (instance != this)
+        {
+            // If another instance exists, destroy this one
+            Destroy(gameObject);
+            return;
+        }
+
         //finds all the actions in the action map
         playerInput = GetComponent<PlayerInput>();
         var actionMap = playerInput.actions.FindActionMap("Buttons");
@@ -244,7 +279,7 @@ public class PlayerInteraction : MonoBehaviour
     {
         Ray ray = Camera.main.ScreenPointToRay(mousePosition);
         RaycastHit hit;
-        float rayRadius = 2.5f;
+        float rayRadius = 3f;
 
         if (Physics.SphereCast(ray, rayRadius, out hit, Mathf.Infinity, pikminLayer))
         {

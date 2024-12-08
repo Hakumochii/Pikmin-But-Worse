@@ -6,20 +6,15 @@ public class Treasure : MonoBehaviour
 {
     public List<GameObject> spotList = new List<GameObject>();
     public Dictionary<GameObject, bool> spot = new Dictionary<GameObject, bool>();
+    public float threshold;
     
     //references for moving the treasure
     private UnityEngine.AI.NavMeshAgent agent;
     public GameObject playerBase;
     public GameObject treasureBody;
     private Vector3 basePosition;
-
-    //variable for collecting treasure completion
     private bool treasureCollected = false;
-    public bool TreasureCollected
-    {
-        get { return treasureCollected; }
-        set { treasureCollected = value; }
-    }
+
 
     private void Start()
     {
@@ -46,7 +41,7 @@ public class Treasure : MonoBehaviour
             LayOnGround();
         }
 
-        if (Vector3.Distance(transform.position, basePosition) < 0.1f) 
+        if (Vector3.Distance(transform.position, basePosition) < threshold) 
         {
             TreasureCollectedComplete();
         }
@@ -70,7 +65,6 @@ public class Treasure : MonoBehaviour
     {
         agent.isStopped = false;
         agent.updateRotation = false;
-        agent.baseOffset = 1f;
         agent.SetDestination(basePosition);
     }
 
@@ -83,7 +77,29 @@ public class Treasure : MonoBehaviour
     //method for treasure collection when it reaches the base position
     private void TreasureCollectedComplete()
     {
-        LayOnGround();
-        treasureCollected = true;
+        if (!treasureCollected)
+        {
+            treasureCollected = true;
+            StartCoroutine(Collect());
+        }
+       
+    }
+
+    private IEnumerator Collect()
+    {
+        GameObject[] allPikmin = GameObject.FindGameObjectsWithTag("Pikmin");
+        
+        foreach (GameObject pikmin in allPikmin)
+        {
+            PikminBehavior pikminBehavior = pikmin.GetComponent<PikminBehavior>();
+            if (pikminBehavior != null && pikminBehavior.task == PikminBehavior.Task.CarryingTreasure && pikminBehavior.currentTreasure == this.gameObject)
+            {
+                pikminBehavior.StopLiftingTreasure();
+                pikminBehavior.task = PikminBehavior.Task.Idle;
+            }
+        }
+        yield return new WaitForSeconds(2f);
+        GameManager.Instance.UpdateTreasureCount();
+        Destroy(gameObject);
     }
 }

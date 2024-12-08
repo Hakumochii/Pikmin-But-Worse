@@ -4,5 +4,17 @@
 EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
-  m_Scenes: []
+  m_Scenes:
+  - enabled: 1
+    path: Assets/Scenes/PikminDiedScene.unity
+    guid: fa4d787dc2782df48a40f95690f83a6b
+  - enabled: 1
+    path: Assets/Scenes/TreasuresCollectedScene.unity
+    guid: 9c4b77be8c73fb747a030bcd89007be6
+  - enabled: 1
+    path: Assets/Scenes/StartScene.unity
+    guid: 55867da13d3cd774fadce03978bab37a
+  - enabled: 1
+    path: Assets/Scenes/GameScene.unity
+    guid: 9fc0d4010bbf28b4594072e72b8655ab
   m_configObjects: {}
