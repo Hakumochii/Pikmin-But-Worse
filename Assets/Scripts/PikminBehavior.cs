@@ -11,29 +11,32 @@ public class PikminBehavior : MonoBehaviour
     public Rigidbody rb;
     private GameObject player;
     public GameObject currentTreasure;
+    [SerializeField] private Vector3 positionAroundTreasure;
 
     //variables used in calculations
     private float pikminDistanceAbovePlayer = 1.5f;
-    [SerializeField] private Vector3 positionAroundTreasure;
+    private float spotThreshold = 1;
 
     //enumerators for diffrent taskes of a pikmin
-    public enum Task { Idle, FollowingTask, Lifted, Thrown, Fighting, MovingToTreasure, CarryingTreasure, Dying }
+    public enum Task { Idle, FollowingTask, Lifted, Thrown, MovingToTreasure, CarryingTreasure, Dying }
     public Task task = Task.Idle;
 
     public enum FollowingTask { GoingTowardsPlayer, Waiting }
     public FollowingTask followingTask;
     private GameObject currentTreasureSpot;
-    private float spotThreshold = 1;
+   
     public enum PikminType { Blue, Red, Yellow};
     public PikminType pikminType;
 
+    //some different states for small fixes like avoiding repeating code and an event for keeping gamemanager updated on pikmin following
     public static event Action<int> OnPikminFollowStateChanged; 
     private bool _isFollowingPlayer = false; 
     private bool isDying = false;
 
+
     private void Start()
     {
-        // Initialize the NavMeshAgent and Rigidbody components
+        // Initialize the NavMeshAgent and Rigidbody components and get player 
         agent = GetComponent<NavMeshAgent>();
         rb = GetComponent<Rigidbody>();
         player = GameObject.FindGameObjectWithTag("Player");
@@ -44,12 +47,13 @@ public class PikminBehavior : MonoBehaviour
 
     private void Update()
     {
+        //checks if task == Task.FollowingTask is true or not if its true a pikmin wil be added to the following variable in game manager
         bool wasFollowing = _isFollowingPlayer;
         _isFollowingPlayer = (task == Task.FollowingTask);
 
         if (_isFollowingPlayer != wasFollowing)
         {
-            // Notify state change (+1 if following, -1 if stopped)
+            // Notify state change (+1 if following, -1 if other)
             OnPikminFollowStateChanged?.Invoke(_isFollowingPlayer ? 1 : -1);
         }
 
@@ -57,10 +61,9 @@ public class PikminBehavior : MonoBehaviour
         switch (task)
         {
             case Task.Idle:
-                // Idle behavior, such as wandering or resting
+                //no task
                 break;
             case Task.FollowingTask:
-                //swithes to another switchstatement for more multible tasks  
                 FollowPlayer();
                 break;
             case Task.Lifted:
@@ -69,8 +72,6 @@ public class PikminBehavior : MonoBehaviour
             case Task.Thrown:
                 InAir();
                 break;
-            case Task.Fighting:
-                break;
             case Task.MovingToTreasure:
                 CheckTreasureArrival(positionAroundTreasure);
                 break;
@@ -78,6 +79,7 @@ public class PikminBehavior : MonoBehaviour
                 LiftingTreasure();
                 break;
             case Task.Dying:
+                //no task while waiting to die
                 break;
         }
     }
@@ -114,7 +116,7 @@ public class PikminBehavior : MonoBehaviour
         agent.ResetPath();
     }
 
-    //stops the agent and moves teh pikmin to ontop of the player
+    //stops the agent and moves the pikmin to ontop of the player
     private void PickedUp()
     {
         agent.enabled = false;
@@ -129,6 +131,7 @@ public class PikminBehavior : MonoBehaviour
         transform.parent = null;
     }
 
+    //sets the pikmin to move to a spot around the current treasue if there is one
     private void GoToTreasure()
     {
         agent.enabled = true;
@@ -146,7 +149,8 @@ public class PikminBehavior : MonoBehaviour
         }
     }
 
-    //make positions for pikmin based on pikmin recuired and treasurecollider and add to dictionary
+    //get a dictionary of positions and values of taken or not taken and check id there is one that is not taken 
+    //if there isnt retun zero which indicates nothing shoild happen
     private Vector3 GetPositionAroundTreasure()
     {
         Treasure treasure = currentTreasure.GetComponent<Treasure>();
@@ -165,9 +169,10 @@ public class PikminBehavior : MonoBehaviour
         
     }
 
+    //check is pikmin has reached the sprt around the treasure and if the positions was zero do nothing
     private void CheckTreasureArrival(Vector3 positionAroundTreasure)
     {
-        if (positionAroundTreasure == player.transform.position)
+        if (positionAroundTreasure == Vector3.zero)
         {
             Debug.Log("No valid treasure position found.");
             return;
@@ -180,6 +185,8 @@ public class PikminBehavior : MonoBehaviour
         }
     }
 
+    //while lifing the treasure the spot is now taken, pikmin is child to treasure 
+    //and the agnet is turned of so the pikmin is technically carried by the treasure
     private void LiftingTreasure()
     {
         Treasure treasure = currentTreasure.GetComponent<Treasure>();
@@ -188,23 +195,25 @@ public class PikminBehavior : MonoBehaviour
         transform.parent = currentTreasure.transform;
     }
 
+    //if the pikmin is set to stop lifting the spot wil no longer be taken, and everythingabout the treasure that the pikmin kept will be null
     public void StopLiftingTreasure()
     {
         Treasure treasure = currentTreasure.GetComponent<Treasure>();
         treasure.spot[currentTreasureSpot] = false;
         agent.enabled = true;
         transform.parent = null;
-        currentTreasureSpot = null; // Clear reference to the spot
+        currentTreasureSpot = null;
         currentTreasure = null;
     }
 
+    //if pikmin is indanger start a corutine that will kill it and it its carrying a tresure it will stop
     private void InDanger()
     {
         if (!isDying)
         {
             if (task == Task.CarryingTreasure)
             {
-                StopLiftingTreasure(); // Stop lifting immediately
+                StopLiftingTreasure();
             }
             isDying = true;
             StartCoroutine(DeathTimer());
@@ -212,6 +221,7 @@ public class PikminBehavior : MonoBehaviour
         
     }
 
+    //a coroutine that will kill the pikmin after 0.5 seconds if it is in danger 
     private IEnumerator DeathTimer()
     {
         yield return new WaitForSeconds(0.5f);
@@ -222,6 +232,7 @@ public class PikminBehavior : MonoBehaviour
         Destroy(gameObject);
     }
 
+    //hnadels different interactions with other objects fx for followinf player og carrying treasure or touching water
     private void OnTriggerEnter(Collider collision)
     {
         //if in contact with player and it is not being lifted the pikmin is set to follow the player 
@@ -256,6 +267,7 @@ public class PikminBehavior : MonoBehaviour
         }
     }
 
+    //part of the logic that keeps the pikmin forn bumping into the player but still follow them
     private void OnTriggerExit(Collider collision)
     {
          //if the pikmin is told to follow the player but the player gets too far away the pikmin will start going towards the player

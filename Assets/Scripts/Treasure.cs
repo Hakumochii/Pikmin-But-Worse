@@ -4,8 +4,10 @@ using UnityEngine;
 
 public class Treasure : MonoBehaviour
 {
+    //list for spots around treasure
     public List<GameObject> spotList = new List<GameObject>();
     public Dictionary<GameObject, bool> spot = new Dictionary<GameObject, bool>();
+    //for how close the treasure should be to the base
     public float threshold;
     
     //references for moving the treasure
@@ -15,7 +17,7 @@ public class Treasure : MonoBehaviour
     private Vector3 basePosition;
     private bool treasureCollected = false;
 
-
+    //get the agent, base and fill the spot dictionary (list was to be able to use the inspector)
     private void Start()
     {
         //get variables for movemnet of treasure
@@ -29,6 +31,8 @@ public class Treasure : MonoBehaviour
         }
     }
 
+    //checks if the treasure has the requirenets to move else its juat lays static
+    //abd checks if the treasure has reached the base
     private void Update()
     {
         if (AreAllSpotsTaken())
@@ -60,7 +64,7 @@ public class Treasure : MonoBehaviour
         return true; 
     }
 
-    //move treasure towards base if recuired pikmin is reached
+    //move treasure towards base if all spots are taken
     private void MoveToBase()
     {
         agent.isStopped = false;
@@ -68,7 +72,7 @@ public class Treasure : MonoBehaviour
         agent.SetDestination(basePosition);
     }
 
-    //lay treasure on the ground if not all pikmin is reached
+    //lay treasure on the ground if not all spots are taken
     private void LayOnGround()
     {
         agent.isStopped = true;
@@ -85,6 +89,8 @@ public class Treasure : MonoBehaviour
        
     }
 
+    //findas all the pikmina and set then to no longer carry the reasure and than set them to idle 
+    //then the treasure count will go up and the treasure wil destroy itself
     private IEnumerator Collect()
     {
         GameObject[] allPikmin = GameObject.FindGameObjectsWithTag("Pikmin");

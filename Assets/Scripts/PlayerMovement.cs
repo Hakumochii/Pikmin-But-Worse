@@ -7,13 +7,13 @@ using UnityEngine.InputSystem;
 public class PlayerMovement : MonoBehaviour
 {
     // general movement
-    private Vector2 move;                  // Made private
-    [SerializeField] private float MoveSpeed; // Retained public for Inspector access
+    private Vector2 move;               
+    [SerializeField] private float MoveSpeed; 
     private PlayerInput _playerInput;
     private CharacterController _controller;
 
     // camera
-    [SerializeField] private GameObject CinemachineCameraTarget; // Retained public for Inspector access
+    [SerializeField] private GameObject CinemachineCameraTarget; 
     private Vector3 _initialCameraPosition;
     private Quaternion _initialCameraRotation;
     private Vector3 cameraOffset; 
@@ -22,7 +22,7 @@ public class PlayerMovement : MonoBehaviour
     private float _targetRotation = 0.0f;
     private float _rotationVelocity;
     private float _verticalVelocity;
-    private float RotationSmoothTime = 0.12f; // Retained public for Inspector access
+    private float RotationSmoothTime = 0.12f; 
 
     private void Start()
     {

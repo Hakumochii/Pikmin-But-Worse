@@ -10,10 +10,8 @@ public class PlayerInteraction : MonoBehaviour
     private InputAction positionAction;
     private InputAction leftClickAction;
     private InputAction rightClickAction;
-    private InputAction scrollAction;
     private InputAction QAction;
     private InputAction EAction;
-    private InputAction spaceAction;
 
     //reference to cursors
     [SerializeField] private GameObject cursorCircleSmallPrefab;
@@ -36,6 +34,7 @@ public class PlayerInteraction : MonoBehaviour
     //corutines
     private Coroutine callPikminCoroutine;
 
+    //singleton pattern
     private static PlayerInteraction instance;
     public static PlayerInteraction Instance
     {
@@ -79,10 +78,8 @@ public class PlayerInteraction : MonoBehaviour
         positionAction = actionMap.FindAction("Position");
         leftClickAction = actionMap.FindAction("LeftClick");
         rightClickAction = actionMap.FindAction("RightClick");
-        scrollAction = actionMap.FindAction("Scroll");
         QAction = actionMap.FindAction("Q");
         EAction = actionMap.FindAction("E");
-        spaceAction = actionMap.FindAction("Space");
     }
 
     //subscribe to events so that the game is always listeninf for player input
@@ -91,20 +88,16 @@ public class PlayerInteraction : MonoBehaviour
         positionAction.Enable();
         leftClickAction.Enable();
         rightClickAction.Enable();
-        scrollAction.Enable();
         QAction.Enable();
         EAction.Enable();
-        spaceAction.Enable();
 
         positionAction.performed += OnMouseMove;
         leftClickAction.performed += OnLeftClick;
         leftClickAction.canceled += OnLeftClickRelease;
         rightClickAction.performed += OnTestClick;
         rightClickAction.canceled += OnRightClickRelease;
-        scrollAction.performed += OnScroll;
         QAction.performed += OnQ;
         EAction.performed += OnE;
-        spaceAction.performed += OnSpace;
     }
 
     //unsubscribe for events if the gameobject were to get destrypted of inactive 
@@ -116,18 +109,14 @@ public class PlayerInteraction : MonoBehaviour
         leftClickAction.canceled -= OnLeftClickRelease;
         rightClickAction.performed -= OnTestClick;
         rightClickAction.canceled -= OnRightClickRelease;
-        scrollAction.performed -= OnScroll;
         QAction.performed -= OnQ;
         EAction.performed -= OnE;
-        spaceAction.performed -= OnSpace;
 
         positionAction.Disable();
         leftClickAction.Disable();
         rightClickAction.Disable();
-        scrollAction.Disable();
         QAction.Disable();
         EAction.Disable();
-        spaceAction.Disable();
     }
 
     //gets the input form the mouse and uses if for a raycasy that handles a cursor
@@ -174,36 +163,17 @@ public class PlayerInteraction : MonoBehaviour
         }
     }
 
-    //not made yet
-    private void OnScroll(InputAction.CallbackContext context)
-    {
-        Vector2 scrollDelta = context.ReadValue<Vector2>();
-        //Debug.Log($"Mouse Scroll: {scrollDelta.y}");
-
-        if (scrollDelta.y > 0)
-        {
-            Debug.Log("Scrolling Up");
-        }
-        else if (scrollDelta.y < 0)
-        {
-            Debug.Log("Scrolling Down");
-        }
-    }
-
+    //stop pikmin form following the player
     private void OnQ(InputAction.CallbackContext context)
     {
         DismissPikmin();
     }
 
+    //changes the pikmin while holing then to throw the one you want
     private void OnE(InputAction.CallbackContext context)
     {
         ChangePikmin();
     }
-
-    private void OnSpace(InputAction.CallbackContext context)
-    {
-    }
-
 
     //Shoots a constant ray form the camera and mouse position and calls ProjectCursor when the ground is hit
     private void HitGroundWithMouse(Vector2 mousePosition)
@@ -331,7 +301,7 @@ public class PlayerInteraction : MonoBehaviour
 
     }
 
-    //sets the task of the closest pikmin to lifter which positions the pikmin on top of the player
+    //sets the task of the closest pikmin to lifted and swhich positions with the pikmin on top of the player
     private void PickUpPikmin(GameObject pikmin)
     {
         PikminBehavior pikminBehavior = pikmin.GetComponent<PikminBehavior>();
@@ -405,6 +375,7 @@ public class PlayerInteraction : MonoBehaviour
         }
     }
 
+    //sets the following pikmin to idle
     private void DismissPikmin()
     {
         GameObject[] allPikmin = GameObject.FindGameObjectsWithTag("Pikmin");
@@ -419,13 +390,13 @@ public class PlayerInteraction : MonoBehaviour
         }
     }
 
+    //gets the pikmin following and puts their type in a list so that it can circle through the list and find the next type of pikmin so that you get a differt type
     private void ChangePikmin()
     {
         // Get all Pikmin in the scene
         GameObject[] allPikmin = GameObject.FindGameObjectsWithTag("Pikmin");
         List<GameObject> followingPikmin = new List<GameObject>();
 
-        // Get the current Pikmin behavior
         PikminBehavior currentPikminBehavior = currentPikmin.GetComponent<PikminBehavior>();
         
         // Add all following Pikmin to the list
@@ -459,10 +430,10 @@ public class PlayerInteraction : MonoBehaviour
 
         if (availableTypes.Count > 1)
         {
-            // List of all Pikmin types (could also be an array or other collection type)
+            // List of all Pikmin types
             PikminBehavior.PikminType[] pikminTypes = (PikminBehavior.PikminType[])System.Enum.GetValues(typeof(PikminBehavior.PikminType));
                 
-            // Find the next type in the list (cyclical)
+            // Find the next type in the list
             PikminBehavior.PikminType currentType = currentPikminBehavior.pikminType;
             int nextTypeIndex = (System.Array.IndexOf(pikminTypes, currentType) + 1) % pikminTypes.Length;
             PikminBehavior.PikminType nextType = pikminTypes[nextTypeIndex];
@@ -494,7 +465,7 @@ public class PlayerInteraction : MonoBehaviour
         }
         else
         {
-            // Find the next Pikmin type in the list (cyclical)
+            // Find the next Pikmin type in the list
             PikminBehavior.PikminType currentType = currentPikminBehavior.pikminType;
             int nextTypeIndex = (availableTypes.IndexOf(currentType) + 1) % availableTypes.Count;
             PikminBehavior.PikminType nextType = availableTypes[nextTypeIndex];

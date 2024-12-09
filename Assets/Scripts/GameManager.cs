@@ -6,11 +6,14 @@ using UnityEngine.SceneManagement;
 
 public class GameManager : MonoBehaviour
 {
+    //variables for UI and completion conditions
     public int pikminFollowing;
     public int pikminOverall = 3;
-    public TextMeshProUGUI pikminCountText;
     public int treasureCount;
     private int treasuresInTotal = 3;
+
+    //UI references
+    public TextMeshProUGUI pikminCountText;
     public TextMeshProUGUI treasureCountText;
     public TextMeshProUGUI pikminAllText;
     public GameObject redPicture;
@@ -19,6 +22,7 @@ public class GameManager : MonoBehaviour
     public GameObject player;
 
 
+    // Singleton pattern because there should only be one and many scripts acess it
     private static GameManager instance;
     public static GameManager Instance
     {
@@ -58,7 +62,7 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    
+    //turn off unneeded UI, set text and subscribe to pikmin following event
     void Start()
     {
         TurnOffAllPictures();
@@ -66,6 +70,7 @@ public class GameManager : MonoBehaviour
         pikminAllText.text = pikminOverall.ToString();
     }
 
+    //Cnatunuesly look for pikmin, check if they are alive and if all treasures are collected
     void Update()
     {
         FindClosestPikmin(); 
@@ -73,6 +78,7 @@ public class GameManager : MonoBehaviour
         CheckIfTreasuresCollected();
     }
 
+    //cheacks if all treasure is collected and loads win sceen if true
     private void CheckIfTreasuresCollected()
     {
         if (treasureCount == treasuresInTotal)
@@ -81,6 +87,7 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    //checks for what kinds of pikmin are alive and if the pikmin needed to complete teh game are dead loos scene wil load
     private void CheckIfPikminAlive()
     {
         GameObject[] allPikmin = GameObject.FindGameObjectsWithTag("Pikmin");
@@ -91,7 +98,6 @@ public class GameManager : MonoBehaviour
         foreach (GameObject pikmin in allPikmin)
         {
             PikminBehavior pikminBehavior = pikmin.GetComponent<PikminBehavior>();
-            // Access the PikminType from the PikminBehavior component
             if (pikminBehavior.pikminType == PikminBehavior.PikminType.Blue)
             {
                 blueAlive++;
@@ -113,11 +119,13 @@ public class GameManager : MonoBehaviour
 
     }
 
+    //unsubscibe form ´´ Following event if this object is destroyed
     private void OnDestroy()
     {
         PikminBehavior.OnPikminFollowStateChanged -= UpdatePikminFollowing; // Unsubscribe from event
     }
 
+    //finds the cloosest pikmin that is following the player and sets the UI to mach
     private void FindClosestPikmin()
     {
         GameObject[] allPikmin = GameObject.FindGameObjectsWithTag("Pikmin");
@@ -154,6 +162,7 @@ public class GameManager : MonoBehaviour
         }
     }
     
+    //turns off all pictures for pikmin in the UI
     private void TurnOffAllPictures()
     {
         redPicture.SetActive(false);
@@ -161,18 +170,21 @@ public class GameManager : MonoBehaviour
         yellowPicture.SetActive(false);
     }
 
+    //changes the pikminfollwing variable is dependant on the pikminBehavior script
     private void UpdatePikminFollowing(int change)
     {
         pikminFollowing += change;
         pikminCountText.text = pikminFollowing.ToString();
     }
 
+    //decreases the overall pikmin count and updates the UI text
     public void DecreasePikminCount()
     {
         pikminOverall--;
         pikminAllText.text = pikminOverall.ToString();
     }
 
+    //increases the treasure count and updates the UI text
     public void UpdateTreasureCount()
     {
         treasureCount++;
