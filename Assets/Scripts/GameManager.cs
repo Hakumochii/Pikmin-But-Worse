@@ -112,7 +112,8 @@ public class GameManager : MonoBehaviour
             }    
         }
 
-        if (blueAlive < 1 || yellowAlive < 1)
+        //you cant kill blue right now but just in case
+        if (blueAlive < 8 || yellowAlive < 6)
         {
             SceneManager.LoadScene("PikminDiedScene");
         }
