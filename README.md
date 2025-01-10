@@ -52,10 +52,11 @@ The game is a very bare bones version of the Pikmin game series. The objective o
 |     UI                                                                         |     2                              |
 |     Switch pikmin                                                              |     3                              |
 |     Dismiss pikmin                                                             |     1                              |
-|     Player model                                                               |     2                              |
+|     Player model (unfinished unfortunately)                                    |     7                              |
 |     Lose/win conditions                                                        |     4                              |
-|     Optimizing and reorganizing                                                |     5                              |
-|     **All**                                                                    |     **??**                         |
+|     Optimizing and reorganizing                                                |     6                              |
+|     Writing Report                                                             |     5                              |
+|     **All**                                                                    |     **62 (and 10 min)**            |
 
 
 ## References
